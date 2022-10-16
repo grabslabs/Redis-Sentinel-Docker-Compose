@@ -1,0 +1,8 @@
+version: '3.8'
+
+services:
+     
+  redis-sentinel:
+    image: '${DOCKER_REGISTRY-}redis-sentinel'
+    build: 
+      context: ./redis-sentinel

@@ -2,19 +2,32 @@ version: '3.8'
 
 services: 
   redis-master:
-    container_name: redis-master
     image: redis:6-alpine
     volumes:
       - "./.data:/data"
     ports:
       - "6379:6379"
-    restart: always
     networks:
-        redis: null
+        redis-network: null
         grabslabs-backend_api: null
         nginx-network:
             aliases:
-              - redis-master  
+              - redis-master
+    deploy:
+      replicas: 1
+      placement:
+        max_replicas_per_node: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        monitor: 5s
+        failure_action: rollback
+        max_failure_ratio: 0.75
+      restart_policy:
+        condition: any
+        delay: 3s
+        max_attempts: 5
+        window: 60s
  
   redis-slave:
     image: redis:6-alpine
@@ -23,35 +36,62 @@ services:
       - redis-master
     volumes:
       - "./.data:/data"
-    restart: always
     networks:
-        redis: null
+        redis-network: null
         grabslabs-backend_api: null
         nginx-network:
             aliases:
-              - redis-slave  
+              - redis-slave
+    deploy:
+      replicas: 1
+      placement:
+        max_replicas_per_node: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        monitor: 5s
+        failure_action: rollback
+        max_failure_ratio: 0.75
+      restart_policy:
+        condition: any
+        delay: 3s
+        max_attempts: 5
+        window: 60s
      
   redis-sentinel:
-    build: 
-      context: ./redis-sentinel
+    image: '${DOCKER_REGISTRY-}redis-sentinel'
     links:
-      - redis-master  
-    restart: always    
-    deploy:
-      replicas: 3
+      - redis-master
     networks:        
-        redis: null
+        redis-network: null
         grabslabs-backend_api: null
         nginx-network:
             aliases:
-              - redis-sentinel 
+              - redis-sentinel
+    deploy:
+      replicas: 2
+      placement:
+        max_replicas_per_node: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        monitor: 5s
+        failure_action: rollback
+        max_failure_ratio: 0.75
+      restart_policy:
+        condition: any
+        delay: 3s
+        max_attempts: 5
+        window: 60s
 
 networks:
-  redis:
-    driver: bridge
+  redis-network:
+    name: redis-network
+    external: true
   grabslabs-backend_api:
-    external:
-        name: grabslabs-backend_api
+    name: grabslabs-backend_api
+    external: true
   nginx-network:
-    external:
-        name: nginx-network
+    name: nginx-network
+    external: true
+
